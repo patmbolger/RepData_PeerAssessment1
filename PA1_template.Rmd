@@ -1,18 +1,78 @@
+```{r, echo=FALSE}
+today = Sys.Date()
+```
 ---
 title: "Reproducible Research: Peer Assessment 1"
+author: "Patrick Bolger"
+date: `r today`
 output: 
   html_document:
     keep_md: true
 ---
-
+Please note that this document should be processed in the same directory that contains the "raw" data file, *activity.csv*.
 
 ## Loading and preprocessing the data
 
+```{r}
+## Takes an interval (int) consisting of a coded expression for hour:minute - that is, the 
+## first (left-most) one or two digit(s) refer to the hour, and the right-most one or two 
+## digits refer to the minute.  Thus:
+##  1055 refers to hour 10, minute 55,
+##     5 refers to hour 0, minute 5,
+##   225 refers to hour 2, minute 25.
+## Return value is a two-element integer vector, with element 1 being the hour, and
+## element 2 being the minute.
 
+convert_interval <- function(interval) {
+    hour_minute <- as.character(interval)
+    chars <- nchar(hour_minute)
+    if(chars == 1) {
+        result = c(0, as.numeric(substr(hour_minute,1,1)))
+    } else if(chars == 2) {
+        result = c(0, as.numeric(substr(hour_minute,1,2)))
+    } else if(chars == 3) {
+        result = c(as.numeric(substr(hour_minute,1,1)), as.numeric(substr(hour_minute,2,3)))
+    } else {
+        result = c(as.numeric(substr(hour_minute,1,2)), as.numeric(substr(hour_minute,3,4)))
+    }
+    result
+}
+
+add_hour_and_minute_and_daytype_vectors <- function(df) {
+    hour_vector <- vector(mode='integer', length=0)
+    minute_vector <- vector(mode='integer', length=0)
+    daytype_vector <- vector(mode='character', length=0)
+    for(interval in df$interval) {
+        hour_and_minute <- convert_interval(interval)
+        hour_vector <- c(hour_vector, hour_and_minute[1])
+        minute_vector <- c(minute_vector, hour_and_minute[2])
+    }
+    for(day in df$date) {
+        day_of_week <- weekdays(as.Date(day))
+        if(day_of_week=='Saturday' | day_of_week=='Sunday') {
+            daytype_vector <- c(daytype_vector, 'Weekend')
+        } else {
+            daytype_vector <- c(daytype_vector, 'Weekday')
+        }
+    }
+    ## add vectors to original dataframe
+    df$hour <- hour_vector
+    df$minute <- minute_vector
+    df$daytype <- factor(daytype_vector)
+    df
+}
+
+data <- read.csv('activity.csv')
+data <- add_hour_and_minute_and_daytype_vectors(data)
+str(data)
+```
 
 ## What is mean total number of steps taken per day?
 
-
+```{r}
+steps_per_day <- tapply(data$steps, data$date, sum)
+hist(steps_per_day, main='Histogram of Steps per Day', ylab='Frequency', xlab='Steps per Day', labels=T, col.axis='red', col='red', ylim=range(0,30))
+```
 
 ## What is the average daily activity pattern?
 
